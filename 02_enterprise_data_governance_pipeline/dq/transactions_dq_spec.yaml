@@ -1,0 +1,43 @@
+rules:
+  - name: transaction-id-unique
+    description: Reseller purchase order line transaction_id must be unique
+    column: transaction_id
+    dimension: UNIQUENESS
+    uniquenessExpectation: {}
+  - name: transaction-sku-present
+    description: Every reseller transaction line must reference a non-null SKU
+    column: sku
+    dimension: COMPLETENESS
+    threshold: 1.0
+    nonNullExpectation: {}
+  - name: valid-order-status
+    description: Order status must belong to governed fulfillment states (COMPLETED, SHIPPED, RETURNED)
+    column: order_status
+    dimension: VALIDITY
+    ignoreNull: true
+    threshold: 1.0
+    setExpectation:
+      values:
+        - 'COMPLETED'
+        - 'SHIPPED'
+        - 'RETURNED'
+  - name: partner-discount-cap
+    description: Standard channel partner discount percentage must be between 0% and 25%
+    column: discount_pct
+    dimension: VALIDITY
+    ignoreNull: true
+    threshold: 1.0
+    rangeExpectation:
+      minValue: '0'
+      maxValue: '25'
+  - name: catalog-sku-referential-integrity
+    description: Every ordered SKU in product_transactions must exist in master products catalog
+    column: sku
+    dimension: INTEGRITY
+    threshold: 1.0
+    rowConditionExpectation:
+      sqlExpression: '`sku` IN (SELECT sku FROM `demo1-371900.ingram_micro_analytics.products`)'
+postScanActions:
+  bigqueryExport:
+    resultsTable: //bigquery.googleapis.com/projects/demo1-371900/datasets/ingram_micro_analytics/tables/dq_scan_results
+catalogPublishingEnabled: true
